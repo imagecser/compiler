@@ -17,6 +17,9 @@ void tree_output(object *head, int tab) {
   if (head == NULL) return;
   if (head->type != TNUL)
     for (i = 0; i < tab * 2; i++) printf(" ");
+  // if (head->type == TNUL)
+    // for (i = 0; i < tab * 2; i++) printf(" ");
+
   switch (head->type) {
     case TINT:
       printf("INT: %d\n", head->vint);
@@ -41,6 +44,7 @@ void tree_output(object *head, int tab) {
       tree_output(head->child, tab + 1);
       break;
     case TNUL:
+      // printf("TNUL %s (%d)\n", head->vstr, head->fl);
       tree_output(head->child, tab + 1);
       break;
   }

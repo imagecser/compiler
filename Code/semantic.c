@@ -177,7 +177,7 @@ StructSpecifier : STRUCT OptTag LC DefList RC {_ac(5);}
 Type goSpecifier(object *root) {
   Type foo = (Type)malloc(sizeof(Type_));
   // Specifier: TYPE
-  if (root->child->type = TTYPE) {
+  if (root->child->type == TTYPE) {
     foo->kind = KBASIC;
     if (!strcmp(root->child->vstr, "int"))
       foo->basic_ = _INT;
@@ -205,7 +205,7 @@ Type goSpecifier(object *root) {
     }
   } else {  // StructSpecifier : STRUCT OptTag LC DefList RC
     object *defList = getChild(structSpecifier, 3);
-    while (defList != NULL) {              // DefList : Def DefList
+    while (defList->type != TNUL) {        // DefList : Def DefList
       object *def = getChild(defList, 0);  // Def : Specifier DecList SEMI
       Type basicType = goSpecifier(getChild(def, 0));
       object *decList = getChild(def, 1);
@@ -242,7 +242,7 @@ Type goSpecifier(object *root) {
       if (findSymbol(field->name, false) != NULL) {
         ;
         sprintf(msg, "Duplicated name \"%s\".", field->name);
-        sem_error(16, root->fl, field->name);
+        sem_error(16, root->fl, msg);
       } else {
         insertSymbol(field);
       }
@@ -265,7 +265,7 @@ void goExtDefList(object *root) {
     if (!strcmp(getChild(extDef, 1)->vstr, "ExtDecList")) {
       // ExtDecList : VarDec
       //  | VarDec COMMA ExtDecList;
-      object *extDecList = getChild(extDecList, 1);
+      object *extDecList = getChild(extDefList, 1);
       while (extDecList != NULL) {
         FieldList field = goVarDec(getChild(extDecList, 0), basicType);
         if (findSymbol(field->name, false) != NULL) {
@@ -305,7 +305,7 @@ void goExtDefList(object *root) {
             sprintf(msg, "Redefined variable \"%s\".", varField->name);
             sem_error(3, funDec->fl, msg);
           } else {
-            insertSymbol(field);
+            insertSymbol(varField);
           }
           type->func_.paramNum++;
           varField->tail = type->func_.params;
@@ -328,7 +328,7 @@ void goExtDefList(object *root) {
 
     } else {  // Specifier SEMI
     }
-    if (getChild(extDefList, 1)->type = TNUL)
+    if (getChild(extDefList, 1)->type == TNUL)
       break;
     else
       extDefList = getChild(extDefList, 1);
@@ -461,26 +461,53 @@ Type goExp(object *exp) {
      | Exp STAR Exp
      | Exp DIV Exp*/
   else if (!strcmp(secondStr, "PLUS") || !strcmp(secondStr, "MINUS") ||
-           !strcmp(secondStr, "STAR") || !strcmp(secondStr, "DIV") ||
-           !strcmp(secondStr, "AND") || !strcmp(secondStr, "OR") ||
-           getChild(exp, 1)->type == TREL) {
+           !strcmp(secondStr, "STAR") || !strcmp(secondStr, "DIV")) {
     Type leftType = goExp(getChild(exp, 0)),
          rightType = goExp(getChild(exp, 2));
-    if (!isTypeEqual(leftType, rightType)) {
+    if (!isTypeEqual(leftType, rightType))
       sem_error(7, exp->fl, "Type mismatched for operands.");
-    } else if (!strcmp(secondStr, "PLUS") || !strcmp(secondStr, "MINUS") ||
-               !strcmp(secondStr, "STAR") || !strcmp(secondStr, "DIV")) {
-    } else if (getChild(exp, 1)->type != TREL) {  // AND OR
-      if (leftType->kind != KBASIC || leftType->kind != _INT) {
-        sem_error(5, exp->fl, "Only type INT could be used for judgement.");
-      }
-    } else {
-      Type foo = (Type)malloc(sizeof(Type_));
-      foo->kind = KBASIC;
-      foo->basic_ = _INT;
-      return foo;
-    }
     return leftType;
+  } else if (!strcmp(secondStr, "AND") || !strcmp(secondStr, "OR")) {
+    Type leftType = goExp(getChild(exp, 0)),
+         rightType = goExp(getChild(exp, 2));
+    if (!isTypeEqual(leftType, rightType))
+      sem_error(7, exp->fl, "Type mismatched for operands.");
+    if (leftType->kind != KBASIC || leftType->kind != _INT)
+      sem_error(5, exp->fl, "Only type INT could be used for judgement.");
+    Type foo = (Type)malloc(sizeof(Type_));
+    foo->kind = KBASIC;
+    foo->basic_ = _INT;
+    return foo;
+  } else if (getChild(exp, 1)->type == TREL) {
+    Type leftType = goExp(getChild(exp, 0)),
+         rightType = goExp(getChild(exp, 2));
+    if (!isTypeEqual(leftType, rightType))
+      sem_error(7, exp->fl, "Type mismatched for operands.");
+    Type foo = (Type)malloc(sizeof(Type_));
+    foo->kind = KBASIC;
+    foo->basic_ = _INT;
+    return foo;
+  // } else if (!strcmp(secondStr, "PLUS") || !strcmp(secondStr, "MINUS") ||
+  //            !strcmp(secondStr, "STAR") || !strcmp(secondStr, "DIV") ||
+  //            !strcmp(secondStr, "AND") || !strcmp(secondStr, "OR") ||
+  //            getChild(exp, 1)->type == TREL) {
+  //   Type leftType = goExp(getChild(exp, 0)),
+  //        rightType = goExp(getChild(exp, 2));
+  //   if (!isTypeEqual(leftType, rightType)) {
+  //     sem_error(7, exp->fl, "Type mismatched for operands.");
+  //   } else if (!strcmp(secondStr, "PLUS") || !strcmp(secondStr, "MINUS") ||
+  //              !strcmp(secondStr, "STAR") || !strcmp(secondStr, "DIV")) {
+  //   } else if (getChild(exp, 1)->type != TREL) {  // AND OR
+  //     if (leftType->kind != KBASIC || leftType->kind != _INT) {
+  //       sem_error(5, exp->fl, "Only type INT could be used for judgement.");
+  //     }
+  //   } else {
+  //     Type foo = (Type)malloc(sizeof(Type_));
+  //     foo->kind = KBASIC;
+  //     foo->basic_ = _INT;
+  //     return foo;
+  //   }
+  //   return leftType;
   } else if (!strcmp(secondStr, "ASSIGNOP")) {
     object *dest = getChild(exp, 0);
     Type foo = goExp(getChild(exp, 0)), bar = goExp(getChild(exp, 2));
@@ -488,10 +515,10 @@ Type goExp(object *exp) {
         (countChild(dest) == 3 && !strcmp(getChild(dest, 0)->vstr, "Exp") &&
          !strcmp(getChild(dest, 1)->vstr, "DOT") &&
          getChild(dest, 2)->type == TID) ||
-        countChild(dest) == 4 && !strcmp(getChild(dest, 0)->vstr, "Exp") &&
-            // !strcmp(getChild(dest, 1)->vstr, "LB") &&
-            // !strcmp(getChild(dest, 3)->vstr, "RB") &&
-            !strcmp(getChild(dest, 2)->vstr, "Exp")) {
+        (countChild(dest) == 4 && !strcmp(getChild(dest, 0)->vstr, "Exp") &&
+         // !strcmp(getChild(dest, 1)->vstr, "LB") &&
+         // !strcmp(getChild(dest, 3)->vstr, "RB") &&
+         !strcmp(getChild(dest, 2)->vstr, "Exp"))) {
       if (!isTypeEqual(foo, bar))
         sem_error(5, exp->fl, "Type mismatched for assignment.");
     } else {

@@ -1,0 +1,5 @@
+int main() {
+    int i[10];
+    i[1.5];
+}
+// msg not the same as the document.

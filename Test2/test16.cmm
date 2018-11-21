@@ -1,0 +1,10 @@
+struct Position {
+    int x;
+};
+struct Position {
+    int y;
+};
+int main() {
+
+}
+// wrong
