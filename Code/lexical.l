@@ -1,6 +1,7 @@
 %{
     #include "syntax.tab.h"
     int yycolumn = 1;
+    // yylineno = 1;
     #define YY_USER_ACTION \
         yylloc.first_line = yylloc.last_line = yylineno; \
         yylloc.first_column = yycolumn; \
@@ -106,20 +107,23 @@ floating_literal {fractional_constant}{exponent_part}?|{digits}\.{exponent_part}
     lex_err("Mysterious character");
 }
 %%
-int main(int argc, char **argv) {
-    if (argc <= 1)
-        return 1;
-    FILE *f = fopen(argv[1], "r");
-    if (!f) {
-        perror(argv[1]);
-        return 1;
-    }
-    yylineno = 1;
-    yyrestart(f);
-    yyparse();
-    if (err_count==0) {
-        tree_output(head, 0);
-        
-    }
-    return 0;
-}
+// int main(int argc, char **argv) {
+//     if (argc <= 1)
+//         return 1;
+//     FILE *f = fopen(argv[1], "r");
+//     if (!f) {
+//         perror(argv[1]);
+//         return 1;
+//     }
+//     err_count = 0;
+//     yylineno = 1;
+//     head = NULL;
+//     printf("here");
+//     yyrestart(f);
+//     yyparse();
+//     if (err_count==0) {
+//         // tree_output(head, 0);
+//         traverseTree(head);
+//     }
+//     return 0;
+// }
