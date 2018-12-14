@@ -29,7 +29,6 @@ typedef struct object_s {
   union {
     int vint;
     float vfloat;
-    char vchar;
     char *vstr;
   };
 } object;
