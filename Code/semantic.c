@@ -596,11 +596,15 @@ Type goExp(object *exp, Operand upshot) {
     Type foo = malloc(sizeof(Type_));
     foo->kind = KBASIC;
     foo->basic_ = _INT;
+//    if (upshot != NULL) {
+//      Operand operand = getOperandInt(oConstant, getChild(exp, 0)->vint);
+//      setOperandTemp(upshot);
+//      InterCode interCode = getInterCodeBinary(iAssign, upshot, operand);
+//      insertCode(interCode);
+//    }
     if (upshot != NULL) {
-      Operand operand = getOperandInt(oConstant, getChild(exp, 0)->vint);
-      setOperandTemp(upshot);
-      InterCode interCode = getInterCodeBinary(iAssign, upshot, operand);
-      insertCode(interCode);
+      upshot->kind = oConstant;
+      sprintf(upshot->un.value, "%d", getChild(exp, 0)->vint);
     }
     return foo;
     // } else if (!strcmp(firstStr, "FLOAT")) {
@@ -613,22 +617,24 @@ Type goExp(object *exp, Operand upshot) {
     return goExp(getChild(exp, 1), upshot);
   } else if (!strcmp(firstStr, "MINUS")) {
     object *second = getChild(exp, 1);
+    Type foo;
     if (getChild(second, 0)->type == TINT && upshot != NULL && getChild(second, 0)->vint >= 0) {
-      Type foo = goExp(second, NULL);
+      foo = goExp(second, NULL);
       upshot->kind = oConstant;
       sprintf(upshot->un.value, "-%d", getChild(second, 0)->vint);
       return foo;
+    } else {
+      Operand rightOperand = getEmptyOperand();
+      foo = goExp(second, rightOperand);
+      if (foo == NULL) return NULL;
+      if (upshot != NULL) {
+        Operand zeroOperand = getOperandStr(oConstant, "0");
+        setOperandTemp(upshot);
+        InterCode interCode = getInterCodeTernary(iMinus, upshot, zeroOperand, rightOperand);
+        insertCode(interCode);
+      }
+      return foo;
     }
-    Operand rightOperand = getEmptyOperand();
-    Type foo = goExp(second, rightOperand);
-    if (foo == NULL) return NULL;
-    if (upshot != NULL) {
-      Operand zeroOperand = getOperandStr(oConstant, "0");
-      setOperandTemp(upshot);
-      InterCode interCode = getInterCodeTernary(iMinus, upshot, zeroOperand, rightOperand);
-      insertCode(interCode);
-    }
-    return foo;
   } else if (!strcmp(firstStr, "NOT")) {
     if (upshot != NULL) {
       // upshot = 1

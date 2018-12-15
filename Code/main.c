@@ -24,10 +24,10 @@ int main(int argc, char **argv) {
     initHashTable();
     initInterCodeList();
     goExtDefList(head->child);
-//    if (argc == 2)
-//      writeFile("stdout");
-//    else if (argc == 3)
-//      writeFile(argv[2]);
+    if (argc == 2)
+      writeFile("stdout");
+    else if (argc == 3)
+      writeFile(argv[2]);
     // traverseTree(head);
   }
   return 0;

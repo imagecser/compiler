@@ -133,10 +133,8 @@ END : SEMI
 %%
 #include "lex.yy.c"
 void yyerror(const char *s) {
-    if (s[0] == 's') {
+    if (s[0] == 's')
         return;
-    }
-        
     err_count += 1;
     fprintf(stderr, "%s\n", s);
 }

@@ -14,7 +14,7 @@ void insertCode(InterCode interCode) {
     return;
   tailInterCode->next = interCode;
   tailInterCode = interCode;
-  writeLastInterCode();
+//  writeLastInterCode();
 }
 
 void writeLastInterCode() {
