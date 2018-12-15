@@ -6,7 +6,7 @@
 #include "intercode.h"
 #include "node.h"
 
-#define HASH_SIZE 0x3fff
+#define HASH_SIZE 0x3fffu
 
 #define _INT 1
 #define _FLOAT 2
@@ -64,6 +64,8 @@ int getSize(Type type, bool isArray);
 InterCode getInterCode(_InterCodeKind kind);
 Operand getClearOperand();
 Operand getOperand(_OperandKind kind);
+void setOperandTemp(Operand operand);
+Operand getTempOperand();
 Operand getOperandInt(_OperandKind kind, int value);
 Operand getOperandStr(_OperandKind kind, const char *src);
 InterCode getInterCodeUnary(_InterCodeKind kind, Operand operand);

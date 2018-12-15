@@ -9,11 +9,9 @@ typedef enum {
   oVariable,
   oTempVariable,
   oConstant,
-  oAddress,
   oTempAddress,
   oLabel,
   oFunction,
-  oDebug
 } _OperandKind;
 
 typedef struct Operand_ *Operand;
@@ -25,8 +23,6 @@ typedef struct Operand_ {
     char value[32];
     Operand name;
   } un;
-  struct Operand_ *nextArg;
-  struct Operand_ *prevArg;
 } Operand_;
 
 typedef enum {
@@ -38,8 +34,6 @@ typedef enum {
   iStar,
   iDiv,
   iGetAddress,
-  iGetValue,
-  iToMemory,
   iGoto,
   iIfGoto,
   iReturn,
@@ -48,9 +42,7 @@ typedef enum {
   iCall,
   iParam,
   iRead,
-  iWrite,
-  iDebug,
-  iRightAt
+  iWrite
 } _InterCodeKind;
 
 typedef struct InterCode_ *InterCode;
@@ -87,7 +79,9 @@ void initInterCodeList();
 
 void insertCode(InterCode interCode);
 
-void writeInterCode(const char *_filename);
+void writeLastInterCode();
+
+void writeFile(const char *_filename);
 
 void writeOperand(Operand operand);
 

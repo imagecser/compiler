@@ -2,7 +2,6 @@
 #include "semantic.h"
 #include "intercode.h"
 
-int tVariableIndex = 0;
 char msg[100];
 FieldList hashTable[HASH_SIZE];
 
@@ -22,8 +21,8 @@ int countChild(object *root) {
 unsigned int hashFunc(char *name) {
   unsigned int val = 0, i;
   for (; *name; ++name) {
-    val = (val << 2) + *name;
-    if ((i = val & ~HASH_SIZE)) val = (val ^ (i >> 12)) & HASH_SIZE;
+    val = (val << 2u) + *name;
+    if ((i = val & ~HASH_SIZE)) val = (val ^ (i >> 12u)) & HASH_SIZE;
   }
   return val;
 }
@@ -32,6 +31,43 @@ void initHashTable() {
   int i;
   for (i = 0; i < HASH_SIZE; i++);
   hashTable[i] = NULL;
+
+  Type returnReadType = malloc(sizeof(Type_));
+  returnReadType->kind = KBASIC;
+  returnReadType->basic_ = _INT;
+  Type readType = malloc(sizeof(Type_));
+  readType->kind = KFUNC;
+  readType->func_.funcType = returnReadType;
+  readType->func_.paramNum = 0;
+  readType->func_.params = NULL;
+  FieldList readField = malloc(sizeof(FieldList_));
+  readField->name = "read";
+  readField->type = readType;
+  readField->isArg = false;
+  insertSymbol(readField);
+
+  Type returnWriteType = malloc(sizeof(Type_));
+  returnWriteType->kind = KBASIC;
+  returnWriteType->basic_ = _INT;
+  Type writeParamType = malloc(sizeof(Type_));
+  writeParamType->kind = KBASIC;
+  writeParamType->basic_ = _INT;
+  FieldList writeParamField = malloc(sizeof(FieldList_));
+  writeParamField->name = "dest";
+  writeParamField->type = writeParamType;
+  writeParamField->isArg = true;
+  writeParamField->tail = NULL;
+  Type writeType = malloc(sizeof(Type_));
+  writeType->kind = KFUNC;
+  writeType->func_.funcType = returnWriteType;
+  writeType->func_.paramNum = 1;
+  writeType->func_.params = writeParamField;
+  FieldList writeField = malloc(sizeof(FieldList_));
+  writeField->name = "write";
+  writeField->type = writeType;
+  writeField->isArg = false;
+  insertSymbol(writeField);
+
 }
 
 bool insertSymbol(FieldList field) {
@@ -319,7 +355,8 @@ void goExtDefList(object *root) {
           type->func_.params = varField;
 
           // insert code begin
-          Operand paramOperand = getOperandStr(oVariable, varType->func_.params->name);
+//          Operand paramOperand = getOperandStr(oVariable, varType->func_.params->name);
+          Operand paramOperand = getOperandStr(oVariable, varField->name);
           InterCode paramInterCode = getInterCodeUnary(iParam, paramOperand);
           insertCode(paramInterCode);
           //end
@@ -335,7 +372,7 @@ void goExtDefList(object *root) {
         sprintf(msg, "Redefined function \"%s\".", field->name);
         sem_error(4, funDec->fl, msg);
       } else {
-        field->isArg = true;
+        field->isArg = false;
         insertSymbol(field);
       }
       goCompSt(getChild(extDef, 2), basicType);
@@ -428,15 +465,27 @@ void goStmt(object *stmt, Type funcType) {
   } else if (!strcmp(getChild(stmt, 0)->vstr, "CompSt")) {
     goCompSt(getChild(stmt, 0), funcType);
   } else if (!strcmp(getChild(stmt, 0)->vstr, "RETURN")) {
-    Type returnType = goExp(getChild(stmt, 1), NULL);
-    if (!isTypeEqual(returnType, funcType))
-      sem_error(8, stmt->fl, "Type mismatched for return.");
-    // insert code begin
-    Operand operand = getClearOperand();
+
+//    Type returnType = goExp(getChild(stmt, 1), NULL);
+//    if (!isTypeEqual(returnType, funcType))
+//      sem_error(8, stmt->fl, "Type mismatched for return.");
+//    // insert code begin
+//    Operand operand = getClearOperand();
+//    if (getChild(getChild(stmt, 1), 0)->type == TINT) {
+//      operand->kind = oConstant;
+//      sprintf(operand->un.value, "%d", getChild(getChild(stmt, 1), 0)->vint);
+//    }
+    Type type;
+    Operand operand;
     if (getChild(getChild(stmt, 1), 0)->type == TINT) {
-      operand->kind = oConstant;
-      sprintf(operand->un.value, "%d", getChild(getChild(stmt, 1), 0)->vint);
+      operand = getOperandInt(oConstant, getChild(getChild(stmt, 1), 0)->vint);
+      type = goExp(getChild(stmt, 1), NULL);
+    } else {
+      operand = getClearOperand();
+      type = goExp(getChild(stmt, 1), operand);
     }
+    if (!isTypeEqual(type, funcType))
+      sem_error(8, stmt->fl, "Type mismatched for return.");
     InterCode interCode = getInterCodeUnary(iReturn, operand);
     insertCode(interCode);
     // end
@@ -450,16 +499,18 @@ void goStmt(object *stmt, Type funcType) {
      * code
      */
     // label1 condition label2 code goto label3
-    Operand firstLabelOperand = getLabelOperand();
+    Operand firstLabelOperand = getLabelOperand(),
+        secondLabelOperand = getLabelOperand(),
+        thirdLabelOperand = getLabelOperand();
 
     InterCode firstLabelInterCode = getLabelInterCode(firstLabelOperand),
-        secondLabelInterCode = getLabelInterCode(NULL),
-        thirdLabelInterCode = getLabelInterCode(NULL);
+        secondLabelInterCode = getLabelInterCode(secondLabelOperand),
+        thirdLabelInterCode = getLabelInterCode(thirdLabelOperand);
 
     // label1
     insertCode(firstLabelInterCode);
     // condition
-    Type conditionType = goExp(getChild(stmt, 2), NULL);
+    Type conditionType = goCondition(getChild(stmt, 2), secondLabelOperand, thirdLabelOperand);
     if (conditionType->kind != KBASIC || conditionType->basic_ != _INT)
       sem_error(5, stmt->fl, "Only type INT could be used for judgement.");
     // label2
@@ -550,8 +601,7 @@ Type goExp(object *exp, Operand upshot) {
     foo->basic_ = _INT;
     if (upshot != NULL) {
       Operand operand = getOperandInt(oConstant, getChild(exp, 0)->vint);
-      upshot->kind = oTempVariable;
-      upshot->un.tempVarIndex = tVariableIndex++;
+      setOperandTemp(upshot);
       InterCode interCode = getInterCodeBinary(iAssign, upshot, operand);
       insertCode(interCode);
     }
@@ -577,8 +627,7 @@ Type goExp(object *exp, Operand upshot) {
     if (foo == NULL) return NULL;
     if (upshot != NULL) {
       Operand zeroOperand = getOperandStr(oConstant, "0");
-      upshot->kind = oTempVariable;
-      upshot->un.tempVarIndex = tVariableIndex++;
+      setOperandTemp(upshot);
       InterCode interCode = getInterCodeTernary(iMinus, upshot, zeroOperand, rightOperand);
       insertCode(interCode);
     }
@@ -651,8 +700,7 @@ Type goExp(object *exp, Operand upshot) {
       interCode = getInterCode(iDiv);
 
     if (upshot != NULL) {
-      upshot->kind = oTempVariable;
-      upshot->un.tempVarIndex = tVariableIndex++;
+      setOperandTemp(upshot);
       if (leftOperand->kind == oConstant && rightOperand->kind == oConstant) {
         int result, leftNum = getChild(getChild(exp, 0), 0)->vint,
             rightNum = getChild(getChild(exp, 2), 0)->vint;
@@ -777,15 +825,18 @@ Type goExp(object *exp, Operand upshot) {
       }
       return NULL;
     }
-    Type definedType = foo->type, type = malloc(sizeof(Type_));
+    Type definedType, type = malloc(sizeof(Type_));
+//    if (strcmp(getChild(exp, 0)->vstr, "read") != 0 && strcmp(getChild(exp, 0)->vstr, "write") != 0)
+    definedType = foo->type;
+//    else
+//      definedType = type;
     type->kind = KFUNC;
     type->func_.paramNum = 0;
     type->func_.params = NULL;
     if (countChild(exp) == 3) {
       if (!strcmp(getChild(exp, 0)->vstr, "read")) {
         if (upshot != NULL) {
-          upshot->kind = oTempVariable;
-          upshot->un.tempVarIndex = tVariableIndex++;
+          setOperandTemp(upshot);
           InterCode readInterCode = getInterCodeUnary(iRead, upshot);
           insertCode(readInterCode);
         }
@@ -793,21 +844,27 @@ Type goExp(object *exp, Operand upshot) {
         Operand funcOperand = getOperandStr(oFunction, getChild(exp, 0)->vstr);
         if (upshot == NULL)
           upshot = getClearOperand();
-        upshot->kind = oTempVariable;
-        upshot->un.tempVarIndex = tVariableIndex++;
+        setOperandTemp(upshot);
         InterCode interCode = getInterCodeBinary(iCall, upshot, funcOperand);
         insertCode(interCode);
       }
     } else if (!strcmp(getChild(exp, 0)->vstr, "write")) {
+      Type varType;
       Operand argOperand;
       object *argExp = getChild(getChild(exp, 2), 0);
       if (getChild(exp, 0)->type == TINT) {
-        goExp(argExp, 0);
+        varType = goExp(argExp, 0);
         argOperand = getOperandStr(oConstant, getChild(exp, 0)->vstr);
       } else {
         argOperand = getOperand(oTempVariable);
-        goExp(exp, argOperand);
+        varType = goExp(argExp, argOperand);
       }
+      FieldList tmpField = malloc(sizeof(FieldList_));
+      tmpField->isArg = false;
+      tmpField->type = varType;
+      type->func_.paramNum++;
+      tmpField->tail = type->func_.params;
+      type->func_.params = tmpField;
       InterCode interCode = getInterCodeUnary(iWrite, argOperand);
       insertCode(interCode);
     } else {
@@ -846,9 +903,8 @@ Type goExp(object *exp, Operand upshot) {
       Operand funcOperand = getOperandStr(oFunction, getChild(exp, 0)->vstr);
       if (upshot == NULL)
         upshot = getClearOperand();
-      upshot->kind = oTempVariable;
-      upshot->un.tempVarIndex = tVariableIndex++;
-      InterCode funcInterCode = getInterCodeBinary(iFunction, upshot, funcOperand);
+      setOperandTemp(upshot);
+      InterCode funcInterCode = getInterCodeBinary(iCall, upshot, funcOperand);
       insertCode(funcInterCode);
     }
     if (!isTypeEqual(type, definedType)) {
@@ -937,20 +993,19 @@ Type goExp(object *exp, Operand upshot) {
       offsetOperand = getOperandStr(oConstant, "0");
     } else {
       Operand widthOperand = getOperandInt(oConstant, getSize(foo, true));
-      offsetOperand = getOperandInt(oTempVariable, tVariableIndex++);
+      offsetOperand = getTempOperand();
       InterCode offsetInterCode = getInterCodeTernary(iStar, offsetOperand, subOperand, widthOperand);
       insertCode(offsetInterCode);
     }
     InterCode baseInterCode = getInterCodeTernary(iGetAddress, NULL, baseOperand, offsetOperand);
     if (foo->array_.type->kind == KBASIC) {
-      Operand addrOperand = getOperandInt(oTempVariable, tVariableIndex++);
+      Operand addrOperand = getTempOperand();
       baseInterCode->ternary.res = addrOperand;
       upshot->kind = oTempAddress;
       upshot->un.name = addrOperand;
     } else {
       baseInterCode->ternary.res = upshot;
-      upshot->kind = oTempVariable;
-      upshot->un.tempVarIndex = tVariableIndex++;
+      setOperandTemp(upshot);
     }
     if (getChild(getChild(exp, 0), 0)->type == TID) {
       FieldList fieldList = findSymbol(baseOperand->un.value, false);
@@ -973,24 +1028,22 @@ Type goCondition(object *exp, Operand trueLabelOperand, Operand falseLabelOperan
   if (strcmp(getChild(exp, 0)->vstr, "Exp") == 0) {
     object *operator = getChild(exp, 1);
     if (operator->type == TREL) {
-      Operand fooOperand = getClearOperand(), barOperand = getClearOperand();
+      Operand fooOperand, barOperand;
       Type leftType, rightType;
       // left
       if (getChild(getChild(exp, 0), 0)->type == TINT) {
         leftType = goExp(getChild(exp, 0), NULL);
-        fooOperand->kind = oConstant;
-        sprintf(fooOperand->un.value, "%d", getChild(getChild(exp, 0), 0)->vint);
+        fooOperand = getOperandInt(oConstant, getChild(getChild(exp, 0), 0)->vint);
       } else {
-        fooOperand->kind = oTempVariable;
+        fooOperand = getOperand(oTempVariable);
         leftType = goExp(getChild(exp, 0), fooOperand);
       }
       // right
       if (getChild(getChild(exp, 2), 0)->type == TINT) {
         rightType = goExp(getChild(exp, 2), NULL);
-        barOperand->kind = oConstant;
-        sprintf(barOperand->un.value, "%d", getChild(getChild(exp, 2), 0)->vint);
+        barOperand = getOperandInt(oConstant, getChild(getChild(exp, 2), 0)->vint);
       } else {
-        barOperand->kind = oTempVariable;
+        barOperand = getOperand(oTempVariable);
         rightType = goExp(getChild(exp, 2), barOperand);
       }
       if (leftType == NULL || rightType == NULL)

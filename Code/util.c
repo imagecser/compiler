@@ -3,9 +3,9 @@
 //
 
 #include "semantic.h"
-#include "intercode.h"
 
-int labelIndex = 0;
+int labelIndex = 1;
+int tempVariableIndex = 1;
 
 InterCode getGotoLabelInterCode(Operand operand) {
   InterCode gotoInterCode = malloc(sizeof(InterCode_));
@@ -18,7 +18,7 @@ Operand getLabelOperand() {
   Operand label = malloc(sizeof(Operand_));
   memset(label, 0, sizeof(Operand_));
   label->kind = oLabel;
-  label->kind = labelIndex++;
+  label->un.labelIndex = labelIndex++;
   return label;
 }
 
@@ -115,9 +115,24 @@ Operand getOperand(_OperandKind kind) {
 Operand getOperandInt(_OperandKind kind, int value) {
   Operand operand = getOperand(kind);
   sprintf(operand->un.value, "%d", value);
+  return operand;
+}
+
+void setOperandTemp(Operand operand) {
+  operand->kind = oTempVariable;
+  operand->un.tempVarIndex = tempVariableIndex++;
+}
+
+Operand getTempOperand() {
+  Operand operand = getOperand(oTempVariable);
+  operand->un.tempVarIndex = tempVariableIndex++;
+  return operand;
 }
 
 Operand getOperandStr(_OperandKind kind, const char *src) {
   Operand operand = getOperand(kind);
   strcpy(operand->un.value, src);
+  // memcpy(operand->un.value, src, strlen(src));
+//  operand->un.value[strlen(src)] = 0;
+  return operand;
 }
