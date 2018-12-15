@@ -100,14 +100,14 @@ InterCode getInterCodeDec(Operand op, int size) {
   return interCode;
 }
 
-Operand getClearOperand() {
+Operand getEmptyOperand() {
   Operand operand = malloc(sizeof(Operand_));
   memset(operand, 0, sizeof(Operand_));
   return operand;
 }
 
 Operand getOperand(_OperandKind kind) {
-  Operand operand = getClearOperand();
+  Operand operand = getEmptyOperand();
   operand->kind = kind;
   return operand;
 }

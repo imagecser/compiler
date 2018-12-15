@@ -44,7 +44,7 @@ int countChild(object *root);
 unsigned int hashFunc(char *name);
 void initHashTable();
 bool insertSymbol(FieldList field);
-FieldList findSymbol(char *name, bool func);
+FieldList findSymbol(char *name, bool isFunc);
 bool isTypeEqual(Type p1, Type p2);
 FieldList goVarDec(object *root, Type type);
 Type goSpecifier(object *root);
@@ -62,7 +62,7 @@ InterCode getGotoLabelInterCode(Operand operand);
 int getSize(Type type, bool isArray);
 
 InterCode getInterCode(_InterCodeKind kind);
-Operand getClearOperand();
+Operand getEmptyOperand();
 Operand getOperand(_OperandKind kind);
 void setOperandTemp(Operand operand);
 Operand getTempOperand();
