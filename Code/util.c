@@ -7,14 +7,14 @@
 int labelIndex = 1;
 int tempVariableIndex = 1;
 
-InterCode getGotoLabelInterCode(Operand operand) {
+InterCode genGotoLabelInterCode(Operand operand) {
   InterCode gotoInterCode = malloc(sizeof(InterCode_));
   gotoInterCode->kind = iGoto;
   gotoInterCode->unary.op = operand;
   return gotoInterCode;
 }
 
-Operand getLabelOperand() {
+Operand genLabelOperand() {
   Operand label = malloc(sizeof(Operand_));
   memset(label, 0, sizeof(Operand_));
   label->kind = oLabel;
@@ -22,11 +22,11 @@ Operand getLabelOperand() {
   return label;
 }
 
-InterCode getLabelInterCode(Operand operand) {
+InterCode genLabelInterCode(Operand operand) {
   InterCode label = malloc(sizeof(InterCode_));
   label->kind = iLabel;
   if (operand == NULL)
-    operand = getLabelOperand();
+    operand = genLabelOperand();
   label->unary.op = operand;
   return label;
 }
@@ -60,60 +60,60 @@ int getSize(Type type, bool isArray) {
   return 1;
 }
 
-InterCode getInterCode(_InterCodeKind kind) {
+InterCode genInterCode(_InterCodeKind kind) {
   InterCode interCode = malloc(sizeof(InterCode_));
-  interCode->next = NULL;
   interCode->kind = kind;
+  interCode->next = interCode->prev = NULL;
   return interCode;
 }
 
-InterCode getInterCodeUnary(_InterCodeKind kind, Operand operand) {
-  InterCode interCode = getInterCode(kind);
+InterCode genInterCodeUnary(_InterCodeKind kind, Operand operand) {
+  InterCode interCode = genInterCode(kind);
   interCode->unary.op = operand;
   return interCode;
 }
-InterCode getInterCodeBinary(_InterCodeKind kind, Operand left, Operand right) {
-  InterCode interCode = getInterCode(kind);
+InterCode genInterCodeBinary(_InterCodeKind kind, Operand left, Operand right) {
+  InterCode interCode = genInterCode(kind);
   interCode->binary.right = right;
   interCode->binary.left = left;
   return interCode;
 }
-InterCode getInterCodeTernary(_InterCodeKind kind, Operand res, Operand left, Operand right) {
-  InterCode interCode = getInterCode(kind);
+InterCode genInterCodeTernary(_InterCodeKind kind, Operand res, Operand left, Operand right) {
+  InterCode interCode = genInterCode(kind);
   interCode->ternary.left = left;
   interCode->ternary.right = right;
   interCode->ternary.res = res;
   return interCode;
 }
-InterCode getInterCodeIfGoto(Operand label, Operand left, Operand right, const char *relop) {
-  InterCode interCode = getInterCode(iIfGoto);
+InterCode genInterCodeIfGoto(Operand label, Operand left, Operand right, const char *relop) {
+  InterCode interCode = genInterCode(iIfGoto);
   interCode->ifGoto.right = right;
   interCode->ifGoto.left = left;
   interCode->ifGoto.label = label;
   strcpy(interCode->ifGoto.rel, relop);
   return interCode;
 }
-InterCode getInterCodeDec(Operand op, int size) {
-  InterCode interCode = getInterCode(iDec);
+InterCode genInterCodeDec(Operand op, int size) {
+  InterCode interCode = genInterCode(iDec);
   interCode->dec.op = op;
   interCode->dec.size = size;
   return interCode;
 }
 
-Operand getEmptyOperand() {
+Operand genEmptyOperand() {
   Operand operand = malloc(sizeof(Operand_));
   memset(operand, 0, sizeof(Operand_));
   return operand;
 }
 
-Operand getOperand(_OperandKind kind) {
-  Operand operand = getEmptyOperand();
+Operand genOperand(_OperandKind kind) {
+  Operand operand = genEmptyOperand();
   operand->kind = kind;
   return operand;
 }
 
-Operand getOperandInt(_OperandKind kind, int value) {
-  Operand operand = getOperand(kind);
+Operand genOperandInt(_OperandKind kind, int value) {
+  Operand operand = genOperand(kind);
   sprintf(operand->un.value, "%d", value);
   return operand;
 }
@@ -123,14 +123,14 @@ void setOperandTemp(Operand operand) {
   operand->un.tempVarIndex = tempVariableIndex++;
 }
 
-Operand getTempOperand() {
-  Operand operand = getOperand(oTempVariable);
+Operand genTempOperand() {
+  Operand operand = genOperand(oTempVariable);
   operand->un.tempVarIndex = tempVariableIndex++;
   return operand;
 }
 
-Operand getOperandStr(_OperandKind kind, const char *src) {
-  Operand operand = getOperand(kind);
+Operand genOperandStr(_OperandKind kind, const char *src) {
+  Operand operand = genOperand(kind);
   strcpy(operand->un.value, src);
   // memcpy(operand->un.value, src, strlen(src));
 //  operand->un.value[strlen(src)] = 0;

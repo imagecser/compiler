@@ -56,21 +56,21 @@ Type goExp(object *exp, Operand upshot);
 Type goCondition(object *exp, Operand trueLabelOperand, Operand falseLabelOperand);
 void traverseTree(object *root);
 
-Operand getLabelOperand();
-InterCode getLabelInterCode(Operand operand);
-InterCode getGotoLabelInterCode(Operand operand);
+Operand genLabelOperand();
+InterCode genLabelInterCode(Operand operand);
+InterCode genGotoLabelInterCode(Operand operand);
 int getSize(Type type, bool isArray);
 
-InterCode getInterCode(_InterCodeKind kind);
-Operand getEmptyOperand();
-Operand getOperand(_OperandKind kind);
+InterCode genInterCode(_InterCodeKind kind);
+Operand genEmptyOperand();
+Operand genOperand(_OperandKind kind);
 void setOperandTemp(Operand operand);
-Operand getTempOperand();
-Operand getOperandInt(_OperandKind kind, int value);
-Operand getOperandStr(_OperandKind kind, const char *src);
-InterCode getInterCodeUnary(_InterCodeKind kind, Operand operand);
-InterCode getInterCodeBinary(_InterCodeKind kind, Operand left, Operand right);
-InterCode getInterCodeTernary(_InterCodeKind kind, Operand res, Operand left, Operand right);
-InterCode getInterCodeIfGoto(Operand label, Operand left, Operand right, const char *relop);
-InterCode getInterCodeDec(Operand op, int size);
+Operand genTempOperand();
+Operand genOperandInt(_OperandKind kind, int value);
+Operand genOperandStr(_OperandKind kind, const char *src);
+InterCode genInterCodeUnary(_InterCodeKind kind, Operand operand);
+InterCode genInterCodeBinary(_InterCodeKind kind, Operand left, Operand right);
+InterCode genInterCodeTernary(_InterCodeKind kind, Operand res, Operand left, Operand right);
+InterCode genInterCodeIfGoto(Operand label, Operand left, Operand right, const char *relop);
+InterCode genInterCodeDec(Operand op, int size);
 #endif

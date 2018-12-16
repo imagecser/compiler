@@ -1,25 +1,66 @@
 #include "intercode.h"
 
-InterCode headInterCode, tailInterCode;
+InterCode headInterCode;
 FILE *file;
-void writeInterCode(InterCode code) ;
+void writeInterCode(InterCode code);
 #define fp(param) fputs(param, file)
 
-void initInterCodeList() {
-  headInterCode = tailInterCode = malloc(sizeof(InterCode_));
+InterCode getHeadInterCode() {
+  return headInterCode;
 }
 
-void insertCode(InterCode interCode) {
+void initInterCodeList() {
+//  headInterCode = tailInterCode = malloc(sizeof(InterCode_));
+  headInterCode = malloc(sizeof(InterCode_));
+  headInterCode->next = headInterCode;
+  headInterCode->prev = headInterCode;
+}
+
+void appendCode(InterCode interCode) {
   if (interCode == NULL)
     return;
-  tailInterCode->next = interCode;
-  tailInterCode = interCode;
-//  writeLastInterCode();
+//  tailInterCode->next = interCode;
+//  tailInterCode = interCode;
+//  interCode->prev = headInterCode->prev;
+//  interCode->next = headInterCode;
+//  headInterCode->prev->next = interCode;
+//  headInterCode->prev = interCode;
+  insertInterCodeBefore(headInterCode, interCode);
+#ifdef COMPILER_DEBUG
+  writeLastInterCode();
+#endif
+}
+
+InterCode deleteNode(InterCode interCode) {
+  InterCode prev = interCode->prev;
+  prev->next->prev = prev;
+  prev->next = interCode->next;
+  free(interCode);
+  return prev;
+}
+
+void insertInterCodeBefore(InterCode base, InterCode src) {
+  src->prev = base->prev;
+  src->next = base;
+  base->prev->next = src;
+  base->prev = src;
+}
+
+void insertListBeforeHead(InterCode first, InterCode last) {
+  first->prev = headInterCode->prev;
+  last->next = headInterCode;
+  headInterCode->prev->next = first;
+  headInterCode->prev = last;
+#ifdef COMPILER_DEBUG
+  for (; first != last; first = first->next)
+    writeInterCode(first);
+  writeInterCode(last);
+#endif
 }
 
 void writeLastInterCode() {
   file = stdout;
-  writeInterCode(tailInterCode);
+  writeInterCode(headInterCode->prev);
 }
 
 void writeInterCode(InterCode code) {
@@ -69,11 +110,14 @@ void writeInterCode(InterCode code) {
 }
 
 void writeFile(const char *_filename) {
+//#ifdef COMPILER_DEBUG
+//  return;
+//#endif
   if (!strcmp(_filename, "stdout"))
     file = stdout;
   else
     file = fopen(_filename, "w");
-  for (InterCode code = headInterCode->next; code != NULL; code = code->next)
+  for (InterCode code = headInterCode->next; code != headInterCode; code = code->next)
     writeInterCode(code);
   fclose(file);
 }

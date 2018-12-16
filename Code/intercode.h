@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#define COMPILER_DEBUG
 typedef enum {
   oVariable,
   oTempVariable,
@@ -48,6 +48,7 @@ typedef enum {
 typedef struct InterCode_ *InterCode;
 typedef struct InterCode_ {
   _InterCodeKind kind;
+  InterCode prev;
   InterCode next;
   union {
     struct {
@@ -77,7 +78,15 @@ typedef struct InterCode_ {
 
 void initInterCodeList();
 
-void insertCode(InterCode interCode);
+InterCode getHeadInterCode();
+
+void appendCode(InterCode interCode);
+
+InterCode deleteNode(InterCode interCode);
+
+void insertInterCodeBefore(InterCode base, InterCode src);
+
+void insertListBeforeHead(InterCode first, InterCode last);
 
 void writeLastInterCode();
 

@@ -1,4 +1,5 @@
-#include "semantic.h"
+//#include "semantic.h"
+#include "optimize.h"
 #include "syntax.tab.h"
 
 extern void yyrestart(FILE *);
@@ -24,6 +25,7 @@ int main(int argc, char **argv) {
     initHashTable();
     initInterCodeList();
     goExtDefList(head->child);
+    optimize();
     if (argc == 2)
       writeFile("stdout");
     else if (argc == 3)
