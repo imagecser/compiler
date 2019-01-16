@@ -14,8 +14,9 @@ typedef struct VisitRecord_ {
   char equivalent[32];
   int read;
   int write;
+  InterCode lastWrite;
 }VisitRecord_;
 
-void optimize();
+int optimize();
 
 #endif //COMPILER_OPTIMIZE_H

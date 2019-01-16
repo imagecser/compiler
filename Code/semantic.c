@@ -694,7 +694,16 @@ Type goExp(object *exp, Operand upshot) {
       sem_error(7, exp->fl, "Type mismatched for operands.");
       return leftType;
     }
-
+    if (leftOperand->kind == oTempAddress) {
+      Operand tempOperand = genTempOperand();
+      appendCode(genInterCodeBinary(iAssign, tempOperand, leftOperand));
+      leftOperand = tempOperand;
+    }
+    if (rightOperand->kind == oTempAddress) {
+      Operand tempOperand = genTempOperand();
+      appendCode(genInterCodeBinary(iAssign, tempOperand, rightOperand));
+      rightOperand = tempOperand;
+    }
     InterCode interCode;
     if (!strcmp(getChild(exp, 1)->vstr, "PLUS"))
       interCode = genInterCode(iPlus);
@@ -727,6 +736,10 @@ Type goExp(object *exp, Operand upshot) {
         free(rightOperand);
         rightOperand = genOperandInt(oConstant, result);
         interCode = genInterCodeBinary(iAssign, upshot, rightOperand);
+      } else if (leftOperand->kind == oConstant) {
+        interCode->ternary.left = rightOperand;
+        interCode->ternary.right = leftOperand;
+        interCode->ternary.res = upshot;
       } else {
         interCode->ternary.left = leftOperand;
         interCode->ternary.right = rightOperand;
@@ -758,7 +771,7 @@ Type goExp(object *exp, Operand upshot) {
       return varType;
     }
   } else if (!strcmp(secondStr, "ASSIGNOP")) {
-    object *dest = getChild(exp, 0);
+    object *dest = getChild(exp, 0), *src = getChild(exp, 2);
     Operand leftOperand = genOperand(oTempVariable);
     Type foo = goExp(getChild(exp, 0), leftOperand), bar;
     Operand rightOperand;
@@ -770,7 +783,7 @@ Type goExp(object *exp, Operand upshot) {
 //      bar = goExp(getChild(exp, 2), rightOperand);
 //    }
     rightOperand = genOperand(oTempVariable);
-    bar = goExp(getChild(exp, 2), rightOperand);
+    bar = goExp(src, rightOperand);
 
     if ((countChild(dest) == 1 && getChild(dest, 0)->type == TID) ||
         (countChild(dest) == 3 && !strcmp(getChild(dest, 0)->vstr, "Exp") &&
@@ -781,8 +794,21 @@ Type goExp(object *exp, Operand upshot) {
             // !strcmp(getChild(dest, 3)->vstr, "RB") &&
             !strcmp(getChild(dest, 2)->vstr, "Exp"))) {
       if (isTypeEqual(foo, bar)) {
-        InterCode assignInterCode = genInterCodeBinary(iAssign, leftOperand, rightOperand);
-        appendCode(assignInterCode);
+        if (leftOperand->kind == oTempAddress &&
+            (rightOperand->kind == oTempAddress ||
+                (countChild(src) > 2 &&
+                    !strcmp(getChild(src, 0)->vstr, "Exp") &&
+                    !strcmp(getChild(src, 2)->vstr, "Exp")
+                )
+            )
+            ) {
+          Operand midOperand = genTempOperand();
+          appendCode(genInterCodeBinary(iAssign, midOperand, rightOperand));
+          appendCode(genInterCodeBinary(iAssign, leftOperand, midOperand));
+        } else {
+          InterCode assignInterCode = genInterCodeBinary(iAssign, leftOperand, rightOperand);
+          appendCode(assignInterCode);
+        }
         if (upshot != NULL) {
           InterCode upInterCode = genInterCodeBinary(iAssign, upshot, rightOperand);
           appendCode(upInterCode);
@@ -986,6 +1012,7 @@ Type goExp(object *exp, Operand upshot) {
 //    }
     subOperand = genEmptyOperand();
     bar = goExp(getChild(exp, 2), subOperand);
+//    if (!strcmp(subOperand->un.value, "0")) {
     if (bar->kind != KBASIC || bar->basic_ == _FLOAT)
       sem_error(12, exp->fl, "There is not a integer between \"[\" and \"]\".");
 //    if (getChild(getChild(exp, 2), 0)->type == TINT && getChild(getChild(exp, 2), 0)->vint == 0) {
@@ -997,23 +1024,26 @@ Type goExp(object *exp, Operand upshot) {
     InterCode offsetInterCode = genInterCodeTernary(iStar, offsetOperand, subOperand, widthOperand);
     appendCode(offsetInterCode);
 //    }
-    InterCode baseInterCode = genInterCodeTernary(iGetAddress, NULL, baseOperand, offsetOperand);
+//      InterCode baseInterCode = genInterCodeTernary(iPlus, upshot, baseOperand, offsetOperand);
+//      appendCode(baseInterCode);
+//    }
+    InterCode baseInterCode = genInterCodeTernary(iPlus, NULL, baseOperand, offsetOperand);
     if (foo->array_.type->kind == KBASIC) {
       Operand addrOperand = genTempOperand();
       baseInterCode->ternary.res = addrOperand;
       upshot->kind = oTempAddress;
-      upshot->un.name = addrOperand;
+      upshot->un.dest = addrOperand;
     } else {
       baseInterCode->ternary.res = upshot;
       setOperandTemp(upshot);
     }
-    if (getChild(getChild(exp, 0), 0)->type == TID) {
-      FieldList fieldList = findSymbol(baseOperand->un.value, false);
-      if (fieldList->isArg)
-        baseInterCode->kind = iPlus;
-    } else {
-      baseInterCode->kind = iPlus;
-    }
+//    if (getChild(getChild(exp, 0), 0)->type == TID) {
+//      FieldList fieldList = findSymbol(baseOperand->un.value, false);
+//      if (fieldList->isArg)
+//        baseInterCode->kind = iPlus;
+//    } else {
+//      baseInterCode->kind = iPlus;
+//    }
     appendCode(baseInterCode);
     return foo->array_.type;
   } else {

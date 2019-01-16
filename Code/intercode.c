@@ -3,7 +3,6 @@
 InterCode headInterCode;
 FILE *file;
 void writeInterCode(InterCode code);
-#define fp(param) fputs(param, file)
 
 InterCode getHeadInterCode() {
   return headInterCode;
@@ -79,7 +78,6 @@ void writeInterCode(InterCode code) {
     case iMinus: _tfb(" := ", " - ");
     case iStar: _tfb(" := ", " * ");
     case iDiv: _tfb(" := ", " / ");
-    case iGetAddress: _tfb(" := &", " + ");
     case iGoto: _uf("GOTO ");
     case iIfGoto: {
       fp("IF ");
@@ -109,7 +107,7 @@ void writeInterCode(InterCode code) {
 
 }
 
-void writeFile(const char *_filename) {
+void writeInterFile(const char *_filename) {
 //#ifdef COMPILER_DEBUG
 //  return;
 //#endif
@@ -119,6 +117,7 @@ void writeFile(const char *_filename) {
     file = fopen(_filename, "w");
   for (InterCode code = headInterCode->next; code != headInterCode; code = code->next)
     writeInterCode(code);
+
   fclose(file);
 }
 
@@ -136,7 +135,8 @@ void writeOperand(Operand operand) {
       break;
     case oConstant:sprintf(s, "#%s", operand->un.value);
       break;
-    case oTempAddress:sprintf(s, "*t%d", operand->un.name->un.tempVarIndex);
+//    case oTempAddress:sprintf(s, "*t%d", operand->un.dest->un.tempVarIndex);
+    case oTempAddress: fp("*"); writeOperand(operand->un.dest);
       break;
     case oLabel:sprintf(s, "label%d", operand->un.labelIndex);
       break;
@@ -144,5 +144,5 @@ void writeOperand(Operand operand) {
       break;
     default:break;
   }
-  fp(s);
+  fp("%s", s);
 }

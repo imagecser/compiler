@@ -5,19 +5,31 @@
 #include "optimize.h"
 #include "intercode.h"
 
+unsigned variableIndex = 0;
 VisitRecord variableHashMap[HASH_SIZE];
 
 VisitRecord genVisitRecord(char *name) {
   VisitRecord visitRecord = malloc(sizeof(VisitRecord_));
   strcpy(visitRecord->name, name);
-  strcpy(visitRecord->equivalent, name);
+//#ifdef COMPILER_DEBUG
+//  printf("name: %s, index: %d\n", name, variableIndex);
+//#endif
+//  strcpy(visitRecord->equivalent, name);
+  sprintf(visitRecord->equivalent, "v%d", variableIndex++);
   visitRecord->read = visitRecord->write = 0;
+  visitRecord->lastWrite = NULL;
   return visitRecord;
 }
 
 void initVariableHashMap() {
   for (int i = 0; i < HASH_SIZE; i++)
     variableHashMap[i] = NULL;
+}
+
+bool isInVariableHashMap(char *name) {
+  unsigned key = hashFunc(name);
+  VisitRecord value = variableHashMap[key];
+  return value != NULL;
 }
 
 VisitRecord getVariableHashMap(char *name) {
@@ -43,16 +55,18 @@ void getVariableName(Operand operand, char *name) {
     strcpy(name, operand->un.value);
 }
 
-void increaseRecord(Operand operand, bool isRead) {
+void increaseRecord(Operand operand, bool isRead, InterCode pos) {
   if (operand->kind != oVariable && operand->kind != oTempVariable)
     return;
   char name[32];
   getVariableName(operand, name);
   VisitRecord record = getVariableHashMap(name);
-  if (isRead)
+  if (isRead) {
     record->read++;
-  else
+  } else {
     record->write++;
+    record->lastWrite = pos;
+  }
 }
 
 void recordVariable() {
@@ -61,27 +75,24 @@ void recordVariable() {
     switch (code->kind) {
       case iArg:
       case iWrite:
-      case iReturn:increaseRecord(code->unary.op, true);
+      case iReturn:increaseRecord(code->unary.op, true, code);
         break;
-      case iRead:increaseRecord(code->unary.op, false);
+      case iRead:increaseRecord(code->unary.op, false, code);
         break;
-      case iCall:increaseRecord(code->binary.left, false);
+      case iCall:increaseRecord(code->binary.left, false, code);
         break;
-      case iAssign:increaseRecord(code->binary.left, false);
-        increaseRecord(code->binary.right, true);
+      case iAssign:increaseRecord(code->binary.left, false, code);
+        increaseRecord(code->binary.right, true, code);
         break;
       case iPlus:
       case iMinus:
       case iStar:
-      case iDiv:increaseRecord(code->ternary.res, false);
-        increaseRecord(code->ternary.left, true);
-        increaseRecord(code->ternary.right, true);
+      case iDiv:increaseRecord(code->ternary.res, false, code);
+        increaseRecord(code->ternary.left, true, code);
+        increaseRecord(code->ternary.right, true, code);
         break;
-      case iGetAddress:increaseRecord(code->ternary.res, false);
-        increaseRecord(code->ternary.left, true);
-        break;
-      case iIfGoto:increaseRecord(code->ifGoto.left, false);
-        increaseRecord(code->ifGoto.right, true);
+      case iIfGoto:increaseRecord(code->ifGoto.left, false, code);
+        increaseRecord(code->ifGoto.right, true, code);
         break;
       default:break;
     }
@@ -103,8 +114,10 @@ void findVariableEquivalent() {
         getVariableName(prev->unary.op, lastName);
       else if (prev->kind == iAssign)
         getVariableName(prev->binary.left, lastName);
-      if (!strcmp(rightName, lastName)) {
-        strcpy(getVariableHashMap(leftName)->equivalent, rightName);
+      VisitRecord rightRecord = getVariableHashMap(rightName),
+          leftRecord = getVariableHashMap(leftName);
+      if (!strcmp(rightName, lastName) && rightRecord->lastWrite == prev) {
+        strcpy(leftRecord->equivalent, rightRecord->equivalent);
         deleteNode(code);
       }
     }
@@ -112,13 +125,18 @@ void findVariableEquivalent() {
 }
 
 void replaceVariableName(Operand operand) {
-  if (operand->kind != oTempVariable && operand->kind != oVariable)
+  if (operand->kind == oTempAddress) {
+    replaceVariableName(operand->un.dest);
+  } else if (operand->kind != oTempVariable && operand->kind != oVariable) {
     return;
+  }
   char name[32];
   getVariableName(operand, name);
-  operand->kind = oVariable;
-  VisitRecord record = getVariableHashMap(name);
-  strcpy(operand->un.value, record->equivalent);
+  if (isInVariableHashMap(name)) {
+    operand->kind = oVariable;
+    VisitRecord record = getVariableHashMap(name);
+    strcpy(operand->un.value, record->equivalent);
+  }
 }
 
 void traverseReplaceVariable() {
@@ -140,19 +158,17 @@ void traverseReplaceVariable() {
       case iMinus:
       case iStar:
       case iDiv:
-      case iGetAddress:replaceVariableName(code->ternary.res);
-        replaceVariableName(code->ternary.left);
-        replaceVariableName(code->ternary.right);
-        break;
       case iIfGoto:replaceVariableName(code->ternary.left);
         replaceVariableName(code->ternary.right);
+        break;
+      case iDec:replaceVariableName(code->dec.op);
         break;
       default:break;
     }
   }
 }
 
-void optimize() {
+int optimize() {
   initVariableHashMap();
   recordVariable();
   findVariableEquivalent();
@@ -166,4 +182,5 @@ void optimize() {
   }
   printf("\n");
 #endif
+  return variableIndex;
 }

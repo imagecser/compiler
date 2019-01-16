@@ -1,5 +1,6 @@
 //#include "semantic.h"
 #include "optimize.h"
+#include "objectcode.h"
 #include "syntax.tab.h"
 
 extern void yyrestart(FILE *);
@@ -26,10 +27,13 @@ int main(int argc, char **argv) {
     initInterCodeList();
     goExtDefList(head->child);
     optimize();
-    if (argc == 2)
-      writeFile("stdout");
-    else if (argc == 3)
-      writeFile(argv[2]);
+    if (argc == 2) {
+//      writeInterFile("stdout");
+      writeObjectFile("stdout");
+    } else if (argc == 3) {
+//      writeInterFile(argv[2]);
+      writeObjectFile(argv[2]);
+    }
     // traverseTree(head);
   }
   return 0;

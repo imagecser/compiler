@@ -4,7 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define COMPILER_DEBUG
+#include <stdbool.h>
+//#define COMPILER_DEBUG
+#define fp(param, ...)\
+  fprintf(stdout, param, ##__VA_ARGS__);
+//  fprintf(file, param, ##__VA_ARGS__);
+
 typedef enum {
   oVariable,
   oTempVariable,
@@ -21,7 +26,7 @@ typedef struct Operand_ {
     int tempVarIndex;
     int labelIndex;
     char value[32];
-    Operand name;
+    Operand dest;
   } un;
 } Operand_;
 
@@ -33,7 +38,6 @@ typedef enum {
   iMinus,
   iStar,
   iDiv,
-  iGetAddress,
   iGoto,
   iIfGoto,
   iReturn,
@@ -90,7 +94,7 @@ void insertListBeforeHead(InterCode first, InterCode last);
 
 void writeLastInterCode();
 
-void writeFile(const char *_filename);
+void writeInterFile(const char *_filename);
 
 void writeOperand(Operand operand);
 
